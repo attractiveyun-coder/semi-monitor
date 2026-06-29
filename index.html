@@ -152,6 +152,18 @@ canvas { width: 100% !important; }
 .clear-btn { display: block; width: 100%; padding: 10px; background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-size: 11px; cursor: pointer; font-family: var(--mono); transition: all 0.2s; }
 .clear-btn:hover { border-color: var(--red); color: var(--red); }
 
+.copy-btn {
+  display: none; width: 100%; max-width: 480px; margin: 0 auto 12px;
+  padding: 12px 16px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; color: var(--text); font-family: var(--sans);
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+}
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+.copy-toast {
+  max-width: 480px; margin: -6px auto 12px; text-align: center;
+  font-family: var(--mono); font-size: 11px; color: var(--green);
+  display: none; animation: up 0.3s ease;
+}
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
 @keyframes up { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
 </style>
@@ -217,6 +229,11 @@ canvas { width: 100% !important; }
     <div class="report-txt" id="reportTxt"></div>
   </div>
 
+  <button class="copy-btn" id="copyBtn" onclick="copyReport()" style="display:none">
+    📋 스캔 결과 복사
+    <span class="btn-sub">claude.ai에 붙여넣기용</span>
+  </button>
+  <div class="copy-toast" id="copyToast">✅ 클립보드에 복사됐어요!</div>
   <!-- Notion 저장은 claude.ai에서 별도 요청 -->
   <div class="notion-status" id="notionStatus"></div>
 
@@ -238,6 +255,10 @@ canvas { width: 100% !important; }
       <div class="chart-box"><div class="chart-lbl">Fear & Greed Index 추이</div><canvas id="fgChart" height="110"></canvas></div>
       <div class="chart-box"><div class="chart-lbl">VIX 추이</div><canvas id="vixChart" height="90"></canvas></div>
       <div class="chart-box"><div class="chart-lbl">NVDA · TSMC · SK하이닉스 · 삼성전자 등락률 (%)</div><canvas id="stockChart" height="130"></canvas></div>
+      <div class="chart-box">
+        <div class="chart-lbl">국내 종목 상관관계 (SK하이닉스 · 삼성전자 · TSMC 등락률 추이)</div>
+        <canvas id="corrChart" height="120"></canvas>
+      </div>
       <div class="hlist" id="hlist"></div>
       <button class="clear-btn" onclick="clearHistory()">🗑 히스토리 전체 삭제</button>
     </div>
@@ -453,6 +474,7 @@ async function runScan() {
     show('aiReport');
     show('notionBtn','flex');
     show('footer');
+    show('copyBtn');
     $('ts').textContent = `마지막 업데이트: ${record.date} ${record.time}`;
     show('ts');
     hide('loadingBar');
@@ -630,6 +652,7 @@ function renderHistory() {
   });
 
   /* History list */
+  renderCorrChart(hist);
   $('hlist').innerHTML = [...hist].reverse().map(h => `
     <div class="hitem">
       <div class="hitem-sig">${h.overall==='green'?'🟢':h.overall==='red'?'🔴':'🟡'}</div>
