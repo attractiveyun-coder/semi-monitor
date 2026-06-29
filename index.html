@@ -321,8 +321,7 @@ async function yahoo(sym) {
 
 async function fearGreed() {
   try {
-    const url = 'https://production.dataviz.cnn.io/index/fearandgreed/graphdata/previous-close';
-    const r = await fetchWithProxy(url);
+    const r = await fetch('https://production.dataviz.cnn.io/index/fearandgreed/graphdata/previous-close');
     const j = await r.json();
     return { score: Math.round(j.fear_and_greed.score), rating: j.fear_and_greed.rating };
   } catch { return { score: null, rating: 'unavailable' }; }
