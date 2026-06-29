@@ -280,8 +280,8 @@ let charts = {};
 
 /* ══ Utilities ══ */
 const $ = id => document.getElementById(id);
-const show = (id, t='block') => $(id).style.display = t;
-const hide = id => $(id).style.display = 'none';
+const show = (id, t='block') => { const el=$(id); if(el) el.style.display = t; };
+const hide = id => { const el=$(id); if(el) el.style.display = 'none'; };
 const dot = n => $('d'+n);
 
 function setDot(n, state) { dot(n).className = 'dot' + (state ? ' '+state : ''); }
@@ -342,7 +342,7 @@ async function runScan() {
   btn.disabled = true;
   btn.innerHTML = '⏳ 스캔 중...<span class="btn-sub">데이터 수집 중입니다</span>';
 
-  ['sigBanner','dataGrid','layers','aiReport','notionBtn','notionStatus','footer','ts'].forEach(hide);
+  ['sigBanner','dataGrid','layers','aiReport','notionStatus','footer','ts','copyBtn'].forEach(hide);
   show('loadingBar');
   [1,2,3,4,5].forEach(n => setDot(n, ''));
 
@@ -472,7 +472,6 @@ async function runScan() {
 
     /* Show everything */
     show('aiReport');
-    show('notionBtn','flex');
     show('footer');
     show('copyBtn');
     $('ts').textContent = `마지막 업데이트: ${record.date} ${record.time}`;
@@ -494,8 +493,7 @@ async function saveToNotion() {
   if (!lastData) return;
   const btn = $('notionBtn');
   const st = $('notionStatus');
-  btn.classList.add('loading');
-  btn.innerHTML = '⏳ Notion 저장 중...';
+  if (btn) { btn.classList.add('loading'); btn.innerHTML = '⏳ Notion 저장 중...'; }
   hide('notionStatus');
 
   const { record, overall } = lastData;
@@ -560,9 +558,7 @@ Use notion-create-pages tool. After creating, respond ONLY with JSON: {"url":"<p
     const urlMatch = resultText.match(/https:\/\/(?:app\.)?notion\.[a-z]+\/[^\s"')]+/);
     if (urlMatch) {
       const url = urlMatch[0];
-      btn.classList.remove('loading');
-      btn.innerHTML = '✅ Notion 저장 완료';
-      btn.onclick = () => window.open(url, '_blank');
+      if (btn) { btn.classList.remove('loading'); btn.innerHTML = '✅ Notion 저장 완료'; btn.onclick = () => window.open(url, '_blank'); }
       st.className = 'notion-status ok';
       st.innerHTML = `✅ 저장 완료! <a href="${url}" target="_blank">→ Notion에서 열기</a>`;
       show('notionStatus');
@@ -570,9 +566,7 @@ Use notion-create-pages tool. After creating, respond ONLY with JSON: {"url":"<p
       throw new Error('페이지 URL을 찾지 못했습니다.');
     }
   } catch(e) {
-    btn.classList.remove('loading');
-    btn.innerHTML = '📝 Notion에 리포트 저장';
-    btn.onclick = saveToNotion;
+    if (btn) { btn.classList.remove('loading'); btn.innerHTML = '📝 Notion에 리포트 저장'; btn.onclick = saveToNotion; }
     st.className = 'notion-status err';
     st.textContent = '❌ 저장 실패: ' + e.message;
     show('notionStatus');
