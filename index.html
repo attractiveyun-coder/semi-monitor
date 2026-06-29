@@ -293,11 +293,26 @@ function krwSig(v) { return v >= 1400 ? 'red' : v >= 1350 ? 'yellow' : 'green'; 
 function chgSig(c) { return c > 1 ? 'green' : c < -1 ? 'red' : 'yellow'; }
 
 /* ══ API helpers ══ */
-const PROXY = 'https://api.allorigins.win/raw?url=';
+// CORS 프록시 fallback 체인
+const PROXIES = [
+  'https://corsproxy.io/?url=',
+  'https://thingproxy.freeboard.io/fetch/',
+  'https://api.codetabs.com/v1/proxy?quest='
+];
+
+async function fetchWithProxy(url) {
+  for (const proxy of PROXIES) {
+    try {
+      const r = await fetch(proxy + encodeURIComponent(url), { signal: AbortSignal.timeout(7000) });
+      if (r.ok) return r;
+    } catch(e) { continue; }
+  }
+  throw new Error('모든 프록시 실패: ' + url);
+}
 
 async function yahoo(sym) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=5d`;
-  const r = await fetch(PROXY + encodeURIComponent(url));
+  const r = await fetchWithProxy(url);
   const j = await r.json();
   const closes = j.chart.result[0].indicators.quote[0].close.filter(Boolean);
   const cur = closes.at(-1), prev = closes.at(-2);
@@ -307,7 +322,7 @@ async function yahoo(sym) {
 async function fearGreed() {
   try {
     const url = 'https://production.dataviz.cnn.io/index/fearandgreed/graphdata/previous-close';
-    const r = await fetch(PROXY + encodeURIComponent(url));
+    const r = await fetchWithProxy(url);
     const j = await r.json();
     return { score: Math.round(j.fear_and_greed.score), rating: j.fear_and_greed.rating };
   } catch { return { score: null, rating: 'unavailable' }; }
