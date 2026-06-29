@@ -277,8 +277,11 @@ function krwSig(v) { return v >= 1400 ? 'red' : v >= 1350 ? 'yellow' : 'green'; 
 function chgSig(c) { return c > 1 ? 'green' : c < -1 ? 'red' : 'yellow'; }
 
 /* ══ API helpers ══ */
+const PROXY = 'https://corsproxy.io/?url=';
+
 async function yahoo(sym) {
-  const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=5d`);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=5d`;
+  const r = await fetch(PROXY + encodeURIComponent(url));
   const j = await r.json();
   const closes = j.chart.result[0].indicators.quote[0].close.filter(Boolean);
   const cur = closes.at(-1), prev = closes.at(-2);
@@ -287,7 +290,8 @@ async function yahoo(sym) {
 
 async function fearGreed() {
   try {
-    const r = await fetch('https://production.dataviz.cnn.io/index/fearandgreed/graphdata/previous-close');
+    const url = 'https://production.dataviz.cnn.io/index/fearandgreed/graphdata/previous-close';
+    const r = await fetch(PROXY + encodeURIComponent(url));
     const j = await r.json();
     return { score: Math.round(j.fear_and_greed.score), rating: j.fear_and_greed.rating };
   } catch { return { score: null, rating: 'unavailable' }; }
