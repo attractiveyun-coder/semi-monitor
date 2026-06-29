@@ -107,10 +107,7 @@ body {
 .bn { background: rgba(100,116,139,0.14); color: var(--muted); }
 .lbody { font-size: 11px; color: var(--muted); line-height: 1.65; }
 
-/* ── AI Report ── */
-.ai-report { max-width: 480px; margin: 0 auto 14px; background: var(--surface2); border: 1px solid var(--border); border-left: 3px solid var(--purple); border-radius: 12px; padding: 16px; display: none; animation: up 0.45s ease; }
-.report-lbl { font-family: var(--mono); font-size: 9px; letter-spacing: 0.15em; color: var(--purple); margin-bottom: 9px; text-transform: uppercase; }
-.report-txt { font-size: 12px; line-height: 1.85; white-space: pre-wrap; }
+/* AI Report removed — runs on claude.ai only */
 
 /* ── Notion Button & Status ── */
 .notion-btn {
@@ -188,14 +185,14 @@ canvas { width: 100% !important; }
 
   <button class="scan-btn" id="scanBtn" onclick="runScan()">
     🔍 지금 스캔하기
-    <span class="btn-sub">실시간 수집 → AI 분석 → Notion 저장</span>
+    <span class="btn-sub">실시간 수집 → 신호 판단 → 히스토리 저장</span>
   </button>
 
   <div class="loading-bar" id="loadingBar">
     <div class="loading-step"><div class="dot" id="d1"></div>Fear & Greed Index 수집 중</div>
     <div class="loading-step"><div class="dot" id="d2"></div>VIX · SOX · 환율 수집 중</div>
     <div class="loading-step"><div class="dot" id="d3"></div>NVDA · SK하이닉스 · 삼성전자 · TSMC 수집 중</div>
-    <div class="loading-step"><div class="dot" id="d4"></div>Claude AI 종합 분석 중</div>
+    <div class="loading-step"><div class="dot" id="d4"></div>신호 판단 중</div>
     <div class="loading-step"><div class="dot" id="d5"></div>히스토리 저장 중</div>
   </div>
 
@@ -224,14 +221,11 @@ canvas { width: 100% !important; }
     <div class="lcard"><div class="lhead"><div class="lnum">LAYER 03</div><div class="ltitle">반도체 섹터</div><div class="lbadge" id="b3"></div></div><div class="lbody" id="t3"></div></div>
   </div>
 
-  <div class="ai-report" id="aiReport">
-    <div class="report-lbl">AI ANALYSIS — Claude Sonnet</div>
-    <div class="report-txt" id="reportTxt"></div>
-  </div>
+  <!-- AI 분석은 claude.ai에서 복사 버튼으로 요청 -->
 
   <button class="copy-btn" id="copyBtn" onclick="copyReport()" style="display:none">
-    📋 스캔 결과 복사
-    <span class="btn-sub">claude.ai에 붙여넣기용</span>
+    📋 claude.ai에서 AI 분석하기
+    <span class="btn-sub">결과 복사 → claude.ai에 붙여넣기</span>
   </button>
   <div class="copy-toast" id="copyToast">✅ 클립보드에 복사됐어요!</div>
   <!-- Notion 저장은 claude.ai에서 별도 요청 -->
@@ -239,8 +233,8 @@ canvas { width: 100% !important; }
 
   <div class="footer" id="footer">
     ⚠ 투자 참고용 정보입니다. 투자 결정의 최종 책임은 본인에게 있습니다.<br>
-    Notion 저장 → claude.ai에서 "오늘 리포트 Notion에 저장해줘" 요청<br>
-    데이터 출처: CNN Fear & Greed · Yahoo Finance · Anthropic API
+    AI 분석 · Notion 저장 → 📋 버튼으로 복사 후 claude.ai에 붙여넣기<br>
+    데이터 출처: CNN Fear & Greed · Yahoo Finance
   </div>
 </div>
 
@@ -268,7 +262,7 @@ canvas { width: 100% !important; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 /* ══ Constants ══ */
-const API = 'https://api.anthropic.com/v1/messages';
+
 const NOTION_PARENT = '38ebdb4a-ee26-8121-9ae5-c12bc88749d1';
 const HISTORY_KEY = 'semi_signal_v1';
 const CHART_GRID = 'rgba(30,45,69,0.8)';
@@ -299,7 +293,7 @@ function krwSig(v) { return v >= 1400 ? 'red' : v >= 1350 ? 'yellow' : 'green'; 
 function chgSig(c) { return c > 1 ? 'green' : c < -1 ? 'red' : 'yellow'; }
 
 /* ══ API helpers ══ */
-const PROXY = 'https://corsproxy.io/?url=';
+const PROXY = 'https://api.allorigins.win/raw?url=';
 
 async function yahoo(sym) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=5d`;
@@ -342,7 +336,7 @@ async function runScan() {
   btn.disabled = true;
   btn.innerHTML = '⏳ 스캔 중...<span class="btn-sub">데이터 수집 중입니다</span>';
 
-  ['sigBanner','dataGrid','layers','aiReport','notionStatus','footer','ts','copyBtn'].forEach(hide);
+  ['sigBanner','dataGrid','layers','notionStatus','footer','ts','copyBtn'].forEach(hide);
   show('loadingBar');
   [1,2,3,4,5].forEach(n => setDot(n, ''));
 
@@ -421,30 +415,8 @@ async function runScan() {
     show('layers');
     show('sigBanner');
 
-    /* AI analysis */
-    const prompt = `당신은 반도체 섹터 투자 전문 애널리스트입니다. 한국 투자자 관점에서 오늘의 반도체 투자 신호를 한국어로 분석해주세요.
-
-[실시간 데이터]
-- Fear & Greed Index: ${fg.score??'수집 불가'}점 (${fg.rating})
-- VIX: ${vix.value.toFixed(2)} (${fmt(vix.change,'','%')})
-- SOX 반도체지수: ${sox.value.toFixed(0)} (${fmt(sox.change,'','%')})
-- USD/KRW: ${Math.round(krw.value)}원
-- NVIDIA: $${nvda.value.toFixed(2)} (${fmt(nvda.change,'','%')})
-- SK하이닉스: ${Math.round(hynix.value)}원 (${fmt(hynix.change,'','%')})
-- 삼성전자: ${Math.round(samsung.value)}원 (${fmt(samsung.change,'','%')})
-- TSMC: $${tsmc.value.toFixed(2)} (${fmt(tsmc.change,'','%')})
-- 종합 신호: ${sigText(overall)}
-
-3~5줄로: ① 시장 심리 ② TSMC·NVDA 기반 반도체 섹터 동향 ③ SK하이닉스·삼성전자 관련 액션 제안. 마지막에 "※ 투자 참고용이며 최종 책임은 본인에게 있습니다." 추가.`;
-
-    const aiRes = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
-    });
-    const aiJson = await aiRes.json();
-    lastAI = aiJson.content?.[0]?.text || 'AI 분석을 불러오지 못했습니다.';
-    $('reportTxt').textContent = lastAI;
+    /* AI 분석 생략 — GitHub Pages에서 Anthropic API 호출 불가 */
+    lastAI = '※ AI 분석은 claude.ai에서 스캔 결과 복사 후 요청해주세요.';
     setDot(4,'done'); setDot(5,'active');
 
     /* Save history */
@@ -471,7 +443,6 @@ async function runScan() {
     setDot(5,'done');
 
     /* Show everything */
-    show('aiReport');
     show('footer');
     show('copyBtn');
     $('ts').textContent = `마지막 업데이트: ${record.date} ${record.time}`;
@@ -485,7 +456,7 @@ async function runScan() {
   }
 
   btn.disabled = false;
-  btn.innerHTML = '🔄 다시 스캔하기<span class="btn-sub">실시간 수집 → AI 분석 → Notion 저장</span>';
+  btn.innerHTML = '🔄 다시 스캔하기<span class="btn-sub">실시간 수집 → 신호 판단 → 히스토리 저장</span>';
 }
 
 /* ══ Notion save ══ */
